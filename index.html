@@ -1,0 +1,359 @@
+<HTML>
+        <!-- ***************** Please Read Commnets below before running ************************* -->
+    <head>
+        <meta charset="utf-8">
+        <title>Validate LaunchDarkly Connectivity</title>
+        <style>
+            .json-overlay {
+                opacity: 100%;
+                position:absolute;
+                left:45%;
+                top:400px;
+                z-index: 100;
+                background-image: url('img/Loading.gif');
+            }
+            .json-overlay-hide {
+                opacity: 0%;
+                position:absolute;
+                left:45%;
+                top:400px;
+            }
+             .button1 {
+                display: inline-block;
+                background-color: #3898d8;
+                border-radius: 10px;
+                border: 4px double #cccccc;
+                color: #eeeeee;
+                text-align: center;
+                font-size: 16px;
+                padding: 12px;
+                width: 200px;
+                -webkit-transition: all 0.5s;
+                -moz-transition: all 0.5s;
+                -o-transition: all 0.5s;
+                transition: all 0.5s;
+                cursor: pointer;
+                margin: 5px;
+                }
+
+            #demTable {
+                margin-left:auto;
+                margin-right:auto;
+                width:1200px;
+                height:675px;
+                border:0px none #b3adad;
+                border-collapse:collapse;
+                padding:0px;
+            }
+            #demTable th {
+                border:0px none #b3adad;
+                padding:0px;
+            }
+            #demTable td {
+                border:0px none #b3adad;
+                text-align:left;
+                padding:0px;
+            }
+            .InnerTable {
+                position: relative;
+                top: 40px;
+                left: 5px;
+                height:420px;
+                width: 190px;
+            }
+            .InnerTable21_before_run {
+                opacity: 0%;
+                background-color: white;
+                height: 50px;
+                color:rgb(6, 6, 250);
+                font-weight: bold;
+            }
+            .InnerTable21_valid {
+                opacity: 30%;
+                background-color: greenyellow;
+                height: 50px;
+                color:rgb(6, 6, 250);
+                font-weight: bold;
+            }
+            .InnerTable211_Invalid {
+                opacity: 30%;
+                background-color: red;
+                height: 50px;
+            }
+            .InnerTable22 {
+                opacity: 0%;
+                background-color: black;
+            }
+            #BGIMAGE 
+            {
+                background-image: url("img/LD_Architecture1.1.png");
+                background-color: white;
+                height: 675px;
+                width:400px;
+            }
+           
+        </style>
+        <script>
+            let nIntervId = 1;
+            let powerState = false;
+            let myInterval = 0;
+
+            function nextStep()
+            {
+                try{
+                    switch(nIntervId)
+                    {
+                        case 1:
+                            setUI_Elements(0);
+                        break;
+                        case 2:
+                            playbeep(1);
+                        break;
+                        case 3:
+                            LogText('<BR><B>Status Message</B>: Process Started.....',0);
+                        break;
+                        case 4:
+                            //CallAPI(0);
+                        break;
+                        case 5:
+                            CallAPI();
+                        break;
+                        case 6:
+                            setUI_Elements(1);
+                        break;
+                    }
+                    nIntervId++;
+                }catch (error) 
+                {
+                    nIntervId = -1;
+                    LogText(error.error,false);
+                    clearInterval(myInterval);
+                }
+                if (nIntervId > 6)
+                {
+                    nIntervId = 1;
+                    clearInterval(myInterval);
+                }
+                return nIntervId;
+            }
+
+            // -----------------------------------------------------------------------
+            // ******  Run functions 
+            // ----------------------------------------------------------------------- 
+            function StartProcess()
+            {
+                myInterval = setInterval(nextStep, 500);
+                if (myInterval > 6 || myInterval < 0)
+                {
+                    clearInterval(myInterval);
+                }
+            }
+
+            // -----------------------------------------------------------------------
+            // ******  Pleay a beep sound
+            // -----------------------------------------------------------------------
+            function playbeep(iCount)
+            {
+                var x = 0;
+                var sound = document.getElementById('Audio');
+
+                while (x++ <= iCount)
+                {
+                    sound.play();
+                }
+            }
+
+            // -----------------------------------------------------------------------
+            // ******  Logging messages to the 
+            // ******   screen
+            // -----------------------------------------------------------------------
+            function LogText (messages, clear)
+            {
+                if (clear != true) 
+                { 
+                    document.getElementById("statusMsg").innerHTML += messages + "<BR>";
+                }
+                else{
+                    document.getElementById("statusMsg").innerHTML = "";
+                }
+            }
+            
+            // -----------------------------------------------------------------------
+            // ******  Enable and Disable the UI elements after clicking   
+            // ******   the start button
+            // -----------------------------------------------------------------------
+            function setUI_Elements(iState)
+            {
+                if (iState === 1)   //show
+                {
+                    document.getElementById("WaitImg").className = "json-overlay-hide";
+                    document.getElementById("TestConBtn").disabled = false;
+                    document.getElementById("TestConBtn").style.opacity = 1;
+                }
+                else
+                {
+                    document.getElementById("WaitImg").className = "json-overlay";
+                    document.getElementById("TestConBtn").disabled = true;
+                    document.getElementById("TestConBtn").style.opacity = .4;
+                }
+            }
+
+
+            // -----------------------------------------------------------------------
+            // ****** Call the Python API running on the Server to loop through the  
+            // ******  6 end-points of LD, and return 0=bad conn or 1=good conn 
+            // -----------------------------------------------------------------------
+            function CallAPI (iState)
+            {   
+                nFound = -1;
+                try{
+                    var url = "http://127.0.0.1:8080/";   // Note: update this for the IP to reflect the API address
+                    
+                    var client = new XMLHttpRequest();
+                    var apiResponse;
+                    LogText("",true);       // clear the logging section on the screen
+                    // Start the call to the API
+                    client.open("GET", url, false);
+                    client.send();
+                    apiResponse = client.response;
+                   
+                    if (client.status === 200)
+                    {
+                        apiResponse = apiResponse.replace('"','');//.split(",");
+                        apiResponse = apiResponse.replace('\n','');
+                        apiResponse = apiResponse.replace(']','');
+                        apiResponse = apiResponse.replace('[','').split(",");
+                        apiResponse = apiResponse.map(Number);
+                        if(apiResponse.length >1)
+                        {
+                            nFound = apiResponse.indexOf(0);
+                            if(nFound > -1)
+                            {
+                                LogText ("<B>Warning Message</B>: The request falid to reach <u>one or more</u> SDK endpoints!<BR><BR>The response from the API Call is:<BR><BR>" + client.responseText + "<BR>");
+                            }
+                            else
+                            {
+                                LogText ("<B>Success Message</B>: The call to  succeeded in reaching to <u>all</u> SDK endpoints!<BR><BR>The response from the API Call is:<BR><BR>" + client.responseText + "<BR>");
+                            }
+                            Update_Img(apiResponse);
+
+                        }
+                        else
+                        {
+                            LogText ("<B>Error Message</B>: The request returned no values....check your network connection: " + client.responseText + "<BR>");
+                        }
+                    }
+                    else{
+                        LogText ("<B>Error Message</B>: The request did not succeed!<BR><BR>The response status is: " + client.status + " " + client.statusText + "." + "<BR>");
+                    }
+                }
+                catch(err)
+                {
+                    setUI_Elements(1);
+                    LogText('',true); //clear Text @HTML section first
+                    LogText("<B>Error Message</B>: An Error Occured: " + err.message,false);
+                }
+            }
+
+
+            // -----------------------------------------------------------------------
+            // ****** Change the status of the Flag Delivery Network Image 
+            // ******  to reflect the status of the LD Endpoints connection Statuses
+            // -----------------------------------------------------------------------
+            function Update_Img(Svr_List)
+            {
+                var RowName = '';
+                var RowName2 = '';
+                var iItem = 0;
+                for (let iItem in Svr_List)
+                {
+                    if (Svr_List[iItem] === 1)
+                    {
+                        RowName = 'Row'+(parseInt(iItem)+1);
+                        RowName2 = 'Rowx'+(parseInt(iItem)+1);
+                        document.getElementById(RowName).className="InnerTable21_valid";
+                        document.getElementById(RowName2).innerHTML="&#10004;";
+                    }
+                    else
+                    {
+                        RowName = 'Row'+(parseInt(iItem)+1);
+                        RowName2 = 'Rowx'+(parseInt(iItem)+1);
+                        document.getElementById(RowName).className="InnerTable211_Invalid";
+                        document.getElementById(RowName2).innerHTML="&#x2718;";
+                    }
+                }
+            }
+        </script>
+        </head>
+        <!-- *************************** Start HTML Page *************************** -->
+        <body>
+            <img id="WaitImg" class="json-overlay-hide" src="img/Loading.gif">
+            <audio id="Audio" >
+                <source src="https://www.soundjay.com/misc/censor-beep-01.mp3" type="audio/mpeg">
+            </audio>
+            <BR><BR>
+            <Table align="center" width="1200px">
+                    <TR><TD><img src="img/logo.jpg"></TD></TR>
+            </Table>
+            <table id="demTable">
+                <TR>
+                    <TD><img src="img/LD_Architecture1.0.png"></TD>
+                    <TD id="BGIMAGE" width="400px">
+                        <!--img src="img/LD_Architecture1.1.png"-->
+                        <table class="InnerTable">
+                            <TR class="InnerTable21_before_run" id="Row1">
+                                <TD id="Rowx1">&#10004;</TD>
+                            </TR>
+                            <TR calss="InnerTable22" height="18x">
+                                <TD></TD>
+                            </TR>
+                            <TR class="InnerTable21_before_run" id="Row2">
+                                <TD id="Rowx2">&#10004;</TD>
+                            </TR>
+                            <TR class="InnerTable22" height="18px">
+                                <TD></TD>
+                            </TR>
+                            <TR class="InnerTable21_before_run" id="Row3">
+                                <TD id="Rowx3">&#10004;</TD>
+                            </TR>
+                            <TR class="InnerTable22" height="21px">
+                                <TD></TD>
+                            </TR>
+                            <TR class="InnerTable21_before_run" id="Row4">
+                                <TD id="Rowx4">&#10004;</TD>
+                            </TR>
+                            <TR class="InnerTable22" height="21px">
+                                <TD></TD>
+                            </TR>
+                           
+                            <TR class="InnerTable21_before_run" id="Row5">
+                                <TD id="Rowx5">&#10004;</TD>
+                            </TR>
+                            <TR class="InnerTable22" height="21px">
+                                <TD></TD>
+                            </TR>
+                            <TR class="InnerTable21_before_run" id="Row6">
+                                <TD id="Rowx6">&#10004;</TD>
+                            </TR>
+                        </table>
+                    </TD>
+                </TR>
+            </table>
+            <Table align="center" width="1200px">
+                <TR style="background-color:lightgray;">
+                    <TD colspan="2" align="center" >
+                        <input id="TestConBtn" type="button" value="Validate Connections" class="button1" onclick="StartProcess();">
+                        <input id="ResetBtn" type="button" value="Reset" class="button1" onclick="location.reload (true);">
+                    </TD>
+                </TR>
+                <TR style="background-color:lightblue;scroll-behavior: auto;">
+                    <TD colspan="2" id="statusMsg" height="150px">
+                        Ready....
+                    </TD>
+                </TR>
+            </Table>
+            <script>
+                document.body.style.zoom = "75%";
+            </script>
+</body>
+</HTML>
